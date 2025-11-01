@@ -20,7 +20,8 @@ from app.schemas.integration import (
     FacebookCallbackRequest,
     FacebookPushRequest,
     FacebookPullRequest,
-    IntegrationResponse,
+    IntegrationAccountResponse,
+    IntegrationListResponse,
 )
 
 __all__ = [

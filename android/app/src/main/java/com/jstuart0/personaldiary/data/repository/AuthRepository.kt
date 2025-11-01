@@ -63,7 +63,7 @@ class AuthRepository @Inject constructor(
                     SignupRequest(
                         email = email,
                         password = password,
-                        encryptionTier = "E2E",
+                        encryptionTier = "e2e", // Backend expects lowercase
                         publicKey = publicKey
                     )
                 }
@@ -73,7 +73,7 @@ class AuthRepository @Inject constructor(
                     SignupRequest(
                         email = email,
                         password = password,
-                        encryptionTier = "UCE",
+                        encryptionTier = "uce", // Backend expects lowercase
                         encryptedMasterKey = encryptedMasterKey
                     )
                 }

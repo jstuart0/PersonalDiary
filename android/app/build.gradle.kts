@@ -34,7 +34,9 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000\"")
+            // Use localhost with ADB reverse port forwarding for real devices
+            // For emulators, use 10.0.2.2
+            buildConfigField("String", "API_BASE_URL", "\"http://localhost:3001\"")
         }
         release {
             isMinifyEnabled = true

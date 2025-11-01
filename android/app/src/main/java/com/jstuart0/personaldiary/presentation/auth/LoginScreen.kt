@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 /**
  * Login screen
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel(),

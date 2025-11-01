@@ -25,7 +25,7 @@ import com.jstuart0.personaldiary.domain.model.EncryptionTier
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignupScreen(
-    tier: String = "E2E",
+    tier: String = "UCE",
     viewModel: AuthViewModel = hiltViewModel(),
     onSignupSuccess: () -> Unit,
     onNavigateBack: () -> Unit

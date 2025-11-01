@@ -15,3 +15,6 @@ export {
 export type { IEncryptionService } from './EncryptionService';
 
 export * as CryptoUtils from './crypto';
+
+// Export factory as EncryptionService for backward compatibility
+export { EncryptionServiceFactory as EncryptionService } from './EncryptionService';

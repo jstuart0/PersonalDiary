@@ -71,46 +71,61 @@ class SyncWorker @AssistedInject constructor(
      */
     private suspend fun syncEntries(): Boolean {
         try {
+            // Get current user
+            val currentUser = authRepository.getCurrentUser()
+            if (currentUser == null) {
+                Log.e(TAG, "No current user found")
+                return false
+            }
+
             // Get pending entries
-            val pendingEntries = entryDao.getEntriesByStatus(SyncStatus.PENDING.name)
+            val pendingEntries = entryDao.getEntriesByStatus(currentUser.userId, SyncStatus.PENDING.name)
 
             Log.d(TAG, "Found ${pendingEntries.size} pending entries to sync")
 
             for (entry in pendingEntries) {
                 try {
-                    if (entry.serverEntryId == null) {
+                    if (entry.externalPostId == null) {
+                        // Get tags for entry
+                        val tags = entryDao.getTagsForEntry(entry.entryId)
+
                         // Create new entry on server
                         val request = CreateEntryRequest(
                             title = entry.title,
-                            content = entry.content,
-                            tags = entry.tags,
-                            mediaIds = emptyList(),
-                            timestamp = entry.timestamp
+                            encryptedContent = entry.encryptedContent,
+                            contentHash = entry.contentHash,
+                            source = entry.source,
+                            tags = tags,
+                            mediaIds = emptyList()
                         )
 
                         val response = api.createEntry(request)
                         if (response.isSuccessful && response.body() != null) {
                             val serverEntry = response.body()!!
                             entryDao.updateServerEntryId(
-                                localId = entry.entryId,
-                                serverId = serverEntry.entryId,
-                                status = SyncStatus.SYNCED.name
+                                entryId = entry.entryId,
+                                serverEntryId = serverEntry.entryId
                             )
+                            entryDao.updateSyncStatus(entry.entryId, SyncStatus.SYNCED.name)
                             Log.d(TAG, "Created entry ${entry.entryId} on server")
                         } else {
                             Log.e(TAG, "Failed to create entry ${entry.entryId}")
                             return false
                         }
                     } else {
+                        // Get tags for entry
+                        val tags = entryDao.getTagsForEntry(entry.entryId)
+
                         // Update existing entry on server
                         val request = UpdateEntryRequest(
                             title = entry.title,
-                            content = entry.content,
-                            tags = entry.tags,
+                            encryptedContent = entry.encryptedContent,
+                            contentHash = entry.contentHash,
+                            tags = tags,
                             mediaIds = emptyList()
                         )
 
-                        val response = api.updateEntry(entry.serverEntryId, request)
+                        val response = api.updateEntry(entry.externalPostId!!, request)
                         if (response.isSuccessful) {
                             entryDao.updateSyncStatus(entry.entryId, SyncStatus.SYNCED.name)
                             Log.d(TAG, "Updated entry ${entry.entryId} on server")
@@ -127,14 +142,14 @@ class SyncWorker @AssistedInject constructor(
 
             // Download new entries from server
             try {
-                val lastSync = entryDao.getLastSyncTimestamp() ?: 0L
+                // For now, get all entries (later can implement lastSync timestamp)
                 val response = api.getEntries(
-                    since = lastSync,
-                    limit = 100
+                    limit = 100,
+                    offset = 0
                 )
 
                 if (response.isSuccessful && response.body() != null) {
-                    val entries = response.body()!!.entries
+                    val entries = response.body()!!
                     Log.d(TAG, "Downloaded ${entries.size} new entries from server")
 
                     for (serverEntry in entries) {
@@ -142,31 +157,56 @@ class SyncWorker @AssistedInject constructor(
                         val existingEntry = entryDao.getEntryByServerId(serverEntry.entryId)
                         if (existingEntry == null) {
                             // Insert new entry
+                            val localEntryId = java.util.UUID.randomUUID().toString()
                             val localEntry = com.jstuart0.personaldiary.data.local.entity.EntryEntity(
-                                entryId = java.util.UUID.randomUUID().toString(),
-                                serverEntryId = serverEntry.entryId,
+                                entryId = localEntryId,
                                 userId = serverEntry.userId,
                                 title = serverEntry.title,
-                                content = serverEntry.content,
-                                tags = serverEntry.tags,
-                                timestamp = serverEntry.timestamp,
+                                encryptedContent = serverEntry.encryptedContent,
+                                contentHash = serverEntry.contentHash,
+                                source = serverEntry.source,
                                 createdAt = serverEntry.createdAt,
                                 updatedAt = serverEntry.updatedAt,
                                 syncStatus = SyncStatus.SYNCED.name,
-                                lastSyncAt = System.currentTimeMillis()
+                                externalPostId = serverEntry.entryId,
+                                externalPostUrl = null
                             )
                             entryDao.insert(localEntry)
+
+                            // Insert tags for new entry
+                            if (serverEntry.tags.isNotEmpty()) {
+                                val tagEntities = serverEntry.tags.map { tagName ->
+                                    com.jstuart0.personaldiary.data.local.entity.EntryTagEntity(
+                                        entryId = localEntryId,
+                                        tagName = tagName,
+                                        autoGenerated = false
+                                    )
+                                }
+                                entryDao.insertTags(tagEntities)
+                            }
                         } else if (serverEntry.updatedAt > existingEntry.updatedAt) {
                             // Update existing entry if server version is newer
                             val updatedEntry = existingEntry.copy(
                                 title = serverEntry.title,
-                                content = serverEntry.content,
-                                tags = serverEntry.tags,
+                                encryptedContent = serverEntry.encryptedContent,
+                                contentHash = serverEntry.contentHash,
                                 updatedAt = serverEntry.updatedAt,
-                                syncStatus = SyncStatus.SYNCED.name,
-                                lastSyncAt = System.currentTimeMillis()
+                                syncStatus = SyncStatus.SYNCED.name
                             )
                             entryDao.update(updatedEntry)
+
+                            // Update tags separately if they exist
+                            if (serverEntry.tags.isNotEmpty()) {
+                                entryDao.deleteTagsForEntry(existingEntry.entryId)
+                                val tagEntities = serverEntry.tags.map { tagName ->
+                                    com.jstuart0.personaldiary.data.local.entity.EntryTagEntity(
+                                        entryId = existingEntry.entryId,
+                                        tagName = tagName,
+                                        autoGenerated = false
+                                    )
+                                }
+                                entryDao.insertTags(tagEntities)
+                            }
                         }
                     }
                 }

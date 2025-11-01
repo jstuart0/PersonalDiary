@@ -28,11 +28,16 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Loading)
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    val currentUser: StateFlow<User?> = authRepository.currentUser
+    val currentUser: StateFlow<User?> = authRepository.getCurrentUserFlow()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val socialAccounts: StateFlow<List<SocialAccount>> = socialRepository.getSocialAccounts()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val socialAccounts: StateFlow<List<SocialAccount>> = currentUser.flatMapLatest { user ->
+        if (user != null) {
+            socialRepository.getSocialAccounts(user.userId)
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val isAppLockEnabled: StateFlow<Boolean> = appLockManager.isAppLockEnabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)

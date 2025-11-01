@@ -144,8 +144,8 @@ fun SettingsScreen(
                 } else {
                     socialAccounts.forEach { account ->
                         SocialAccountItem(
-                            provider = account.provider,
-                            displayName = account.displayName ?: account.email ?: "Unknown",
+                            provider = account.platform,
+                            displayName = account.platformUsername,
                             onDisconnect = { viewModel.disconnectSocialAccount(account.accountId) }
                         )
                     }

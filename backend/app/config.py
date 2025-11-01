@@ -32,23 +32,23 @@ class Settings(BaseSettings):
     database_max_overflow: int = 20
 
     # Redis Configuration
-    redis_url: str
+    redis_url: str = "redis://localhost:6379/0"
 
     # Celery Configuration
-    celery_broker_url: str
-    celery_result_backend: str
+    celery_broker_url: str = "redis://localhost:6379/1"
+    celery_result_backend: str = "redis://localhost:6379/2"
 
     # AWS S3 Configuration
-    aws_access_key_id: str
-    aws_secret_access_key: str
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
-    aws_s3_bucket: str
+    aws_s3_bucket: str = ""
     aws_s3_endpoint_url: str | None = None
 
     # Facebook OAuth Configuration
-    facebook_client_id: str
-    facebook_client_secret: str
-    facebook_redirect_uri: str
+    facebook_client_id: str = ""
+    facebook_client_secret: str = ""
+    facebook_redirect_uri: str = ""
 
     # Encryption Configuration
     encryption_key_algorithm: str = "X25519"

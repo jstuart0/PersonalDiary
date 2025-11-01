@@ -53,6 +53,12 @@ interface EntryDao {
     @Query("UPDATE entries SET syncStatus = :status WHERE entryId = :entryId")
     suspend fun updateSyncStatus(entryId: String, status: String)
 
+    @Query("UPDATE entries SET externalPostId = :serverEntryId WHERE entryId = :entryId")
+    suspend fun updateServerEntryId(entryId: String, serverEntryId: String)
+
+    @Query("SELECT * FROM entries WHERE externalPostId = :serverEntryId")
+    suspend fun getEntryByServerId(serverEntryId: String): EntryEntity?
+
     @Query("SELECT COUNT(*) FROM entries WHERE userId = :userId")
     suspend fun getEntryCount(userId: String): Int
 
