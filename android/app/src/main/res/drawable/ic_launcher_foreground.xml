@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Personal Diary icon - Book with lock symbol -->
+    <group
+        android:scaleX="0.6"
+        android:scaleY="0.6"
+        android:translateX="21.6"
+        android:translateY="21.6">
+
+        <!-- Book outline -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M18,2C16.9,2 16,2.9 16,4V20C16,21.1 16.9,22 18,22H30C31.1,22 32,21.1 32,20V4C32,2.9 31.1,2 30,2H18Z
+                         M30,20H18V4H30V20Z"/>
+
+        <!-- Book pages -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M20,6H28V8H20V6Z
+                         M20,10H28V12H20V10Z
+                         M20,14H28V16H20V14Z"/>
+
+        <!-- Lock symbol (center) -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M24,30C25.66,30 27,31.34 27,33V35H21V33C21,31.34 22.34,30 24,30Z
+                         M24,28C21.24,28 19,30.24 19,33V37H29V33C29,30.24 26.76,28 24,28Z"/>
+
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M18,35H30V44C30,45.1 29.1,46 28,46H20C18.9,46 18,45.1 18,44V35Z"/>
+
+        <!-- Lock keyhole -->
+        <path
+            android:fillColor="#FF6200EE"
+            android:pathData="M24,38C23.45,38 23,38.45 23,39V41C23,41.55 23.45,42 24,42C24.55,42 25,41.55 25,41V39C25,38.45 24.55,38 24,38Z"/>
+    </group>
+</vector>

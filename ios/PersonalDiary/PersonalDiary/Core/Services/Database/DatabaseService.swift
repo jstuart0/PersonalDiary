@@ -1,0 +1,326 @@
+//
+//  DatabaseService.swift
+//  PersonalDiary
+//
+//  Created by Claude Code on 2025-10-31.
+//  Copyright © 2025 Personal Diary Platform. All rights reserved.
+//
+
+import CoreData
+import Foundation
+
+/// Service for managing local database operations
+final class DatabaseService {
+    // MARK: - Singleton
+
+    static let shared = DatabaseService()
+
+    // MARK: - Properties
+
+    private let persistenceController: PersistenceController
+
+    private var viewContext: NSManagedObjectContext {
+        persistenceController.viewContext
+    }
+
+    // MARK: - Initialization
+
+    private init(persistenceController: PersistenceController = .shared) {
+        self.persistenceController = persistenceController
+    }
+
+    // MARK: - Entry Operations
+
+    /// Fetches all entries, optionally filtered and sorted
+    func fetchEntries(
+        predicate: NSPredicate? = nil,
+        sortDescriptors: [NSSortDescriptor] = [NSSortDescriptor(key: "createdAt", ascending: false)],
+        limit: Int? = nil
+    ) throws -> [Entry] {
+        let request = EntryEntity.fetchRequest()
+        request.predicate = predicate
+        request.sortDescriptors = sortDescriptors
+
+        if let limit = limit {
+            request.fetchLimit = limit
+        }
+
+        let entities = try persistenceController.fetch(request)
+        return try entities.map { try $0.toDomainModel() }
+    }
+
+    /// Fetches a single entry by ID
+    func fetchEntry(id: UUID) throws -> Entry? {
+        let request = EntryEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+
+        guard let entity = try persistenceController.fetch(request).first else {
+            return nil
+        }
+
+        return try entity.toDomainModel()
+    }
+
+    /// Saves or updates an entry
+    func saveEntry(_ entry: Entry) throws {
+        let context = viewContext
+
+        // Check if entry already exists
+        let request = EntryEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", entry.id as CVarArg)
+
+        let existing = try context.fetch(request).first
+
+        let entity = existing ?? EntryEntity(context: context)
+        try entity.update(from: entry, context: context)
+
+        try persistenceController.save()
+    }
+
+    /// Saves multiple entries in a batch
+    func saveEntries(_ entries: [Entry]) throws {
+        let context = persistenceController.newBackgroundContext()
+
+        try context.performAndWait {
+            for entry in entries {
+                let request = EntryEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "id == %@", entry.id as CVarArg)
+
+                let existing = try context.fetch(request).first
+                let entity = existing ?? EntryEntity(context: context)
+                try entity.update(from: entry, context: context)
+            }
+
+            try persistenceController.save(context: context)
+        }
+    }
+
+    /// Deletes an entry (soft delete)
+    func deleteEntry(id: UUID) throws {
+        let request = EntryEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+
+        guard let entity = try viewContext.fetch(request).first else {
+            throw AppError.database(.recordNotFound)
+        }
+
+        entity.isDeleted = true
+        entity.deletedAt = Date()
+        entity.syncStatus = SyncStatus.pending.rawValue
+
+        try persistenceController.save()
+    }
+
+    /// Permanently deletes an entry
+    func permanentlyDeleteEntry(id: UUID) throws {
+        let request = EntryEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+
+        guard let entity = try viewContext.fetch(request).first else {
+            throw AppError.database(.recordNotFound)
+        }
+
+        viewContext.delete(entity)
+        try persistenceController.save()
+    }
+
+    /// Fetches entries pending sync
+    func fetchPendingSyncEntries() throws -> [Entry] {
+        let predicate = NSPredicate(format: "syncStatus == %@", SyncStatus.pending.rawValue)
+        return try fetchEntries(predicate: predicate)
+    }
+
+    /// Counts total entries
+    func countEntries(predicate: NSPredicate? = nil) throws -> Int {
+        let request = EntryEntity.fetchRequest()
+        request.predicate = predicate
+        return try persistenceController.count(request)
+    }
+
+    // MARK: - Tag Operations
+
+    /// Fetches all tags
+    func fetchTags() throws -> [Tag] {
+        let request = TagEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+
+        let entities = try persistenceController.fetch(request)
+        return entities.map { $0.toDomainModel() }
+    }
+
+    /// Fetches or creates a tag
+    func fetchOrCreateTag(name: String, isAutoGenerated: Bool = false) throws -> Tag {
+        let request = TagEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "name == %@", name)
+        request.fetchLimit = 1
+
+        if let existing = try viewContext.fetch(request).first {
+            return existing.toDomainModel()
+        }
+
+        let entity = TagEntity(context: viewContext)
+        entity.id = UUID()
+        entity.name = name
+        entity.isAutoGenerated = isAutoGenerated
+        entity.createdAt = Date()
+
+        try persistenceController.save()
+        return entity.toDomainModel()
+    }
+
+    // MARK: - Media Operations
+
+    /// Fetches media for an entry
+    func fetchMedia(forEntryID entryID: UUID) throws -> [Media] {
+        let request = MediaEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "entryID == %@", entryID as CVarArg)
+        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: true)]
+
+        let entities = try persistenceController.fetch(request)
+        return try entities.map { try $0.toDomainModel() }
+    }
+
+    /// Saves or updates media
+    func saveMedia(_ media: Media) throws {
+        let context = viewContext
+
+        let request = MediaEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", media.id as CVarArg)
+
+        let existing = try context.fetch(request).first
+        let entity = existing ?? MediaEntity(context: context)
+        entity.update(from: media, context: context)
+
+        try persistenceController.save()
+    }
+
+    /// Deletes media
+    func deleteMedia(id: UUID) throws {
+        let request = MediaEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+
+        guard let entity = try viewContext.fetch(request).first else {
+            throw AppError.database(.recordNotFound)
+        }
+
+        viewContext.delete(entity)
+        try persistenceController.save()
+    }
+
+    /// Fetches media pending upload
+    func fetchPendingUploadMedia() throws -> [Media] {
+        let request = MediaEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "uploadStatus == %@", UploadStatus.pending.rawValue)
+        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: true)]
+
+        let entities = try persistenceController.fetch(request)
+        return try entities.map { try $0.toDomainModel() }
+    }
+
+    // MARK: - User Operations
+
+    /// Fetches the current user
+    func fetchCurrentUser() throws -> User? {
+        let request = UserEntity.fetchRequest()
+        request.fetchLimit = 1
+
+        guard let entity = try persistenceController.fetch(request).first else {
+            return nil
+        }
+
+        return entity.toDomainModel()
+    }
+
+    /// Saves or updates the current user
+    func saveUser(_ user: User) throws {
+        let context = viewContext
+
+        let request = UserEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", user.id as CVarArg)
+
+        let existing = try context.fetch(request).first
+        let entity = existing ?? UserEntity(context: context)
+        entity.update(from: user)
+
+        try persistenceController.save()
+    }
+
+    /// Deletes the current user
+    func deleteCurrentUser() throws {
+        let request = UserEntity.fetchRequest()
+
+        let entities = try viewContext.fetch(request)
+        for entity in entities {
+            viewContext.delete(entity)
+        }
+
+        try persistenceController.save()
+    }
+
+    // MARK: - Search Operations
+
+    /// Searches entries by content (for decrypted/UCE entries only)
+    func searchEntries(query: String) throws -> [Entry] {
+        let predicate = NSPredicate(
+            format: "title CONTAINS[cd] %@ OR content CONTAINS[cd] %@",
+            query, query
+        )
+
+        return try fetchEntries(predicate: predicate)
+    }
+
+    /// Searches entries by date range
+    func fetchEntries(from startDate: Date, to endDate: Date) throws -> [Entry] {
+        let predicate = NSPredicate(
+            format: "createdAt >= %@ AND createdAt <= %@",
+            startDate as CVarArg, endDate as CVarArg
+        )
+
+        return try fetchEntries(predicate: predicate)
+    }
+
+    /// Searches entries by tag
+    func fetchEntries(withTag tagName: String) throws -> [Entry] {
+        let predicate = NSPredicate(format: "ANY tags.name == %@", tagName)
+        return try fetchEntries(predicate: predicate)
+    }
+
+    // MARK: - Maintenance Operations
+
+    /// Clears all data from database
+    func clearAllData() throws {
+        try persistenceController.deleteAll()
+    }
+
+    /// Deletes old soft-deleted entries
+    func cleanupDeletedEntries(olderThan days: Int = 30) throws {
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+
+        let predicate = NSPredicate(
+            format: "isDeleted == YES AND deletedAt < %@",
+            cutoffDate as CVarArg
+        )
+
+        try persistenceController.batchDelete(entityName: "EntryEntity", predicate: predicate)
+    }
+
+    /// Optimizes database storage
+    func vacuum() throws {
+        // Core Data doesn't have explicit vacuum, but we can trigger compaction
+        let coordinator = persistenceController.container.persistentStoreCoordinator
+
+        guard let store = coordinator.persistentStores.first else {
+            throw AppError.database(.operationFailed)
+        }
+
+        try coordinator.performAndWait {
+            try coordinator.migratePersistentStore(
+                store,
+                to: store.url!,
+                options: nil,
+                withType: store.type
+            )
+        }
+    }
+}

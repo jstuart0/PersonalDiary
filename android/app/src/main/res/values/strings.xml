@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Personal Diary</string>
+
+    <!-- Authentication -->
+    <string name="signup_title">Create Account</string>
+    <string name="login_title">Log In</string>
+    <string name="email_label">Email</string>
+    <string name="password_label">Password</string>
+    <string name="signup_button">Sign Up</string>
+    <string name="login_button">Log In</string>
+    <string name="forgot_password">Forgot Password?</string>
+
+    <!-- Encryption Tier -->
+    <string name="choose_security_model">Choose Your Security Model</string>
+    <string name="e2e_title">Maximum Privacy</string>
+    <string name="uce_title">Smart Features</string>
+    <string name="permanent_choice">Permanent choice</string>
+
+    <!-- Timeline -->
+    <string name="timeline_title">My Diary</string>
+    <string name="create_entry">Create Entry</string>
+    <string name="empty_timeline">Start your first entry</string>
+
+    <!-- Entry -->
+    <string name="entry_title_hint">Title (optional)</string>
+    <string name="entry_content_hint">What\'s on your mind?</string>
+    <string name="save_entry">Save</string>
+    <string name="delete_entry">Delete</string>
+    <string name="share_entry">Share</string>
+
+    <!-- Search -->
+    <string name="search_hint_uce">Search all your entries…</string>
+    <string name="search_hint_e2e">Search local entries…</string>
+    <string name="no_results">No results found</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="account_section">Account</string>
+    <string name="sync_section">Sync</string>
+    <string name="storage_section">Storage</string>
+    <string name="social_section">Social Media</string>
+    <string name="security_section">Security</string>
+
+    <!-- Social Media -->
+    <string name="connect_facebook">Connect to Facebook</string>
+    <string name="disconnect_facebook">Disconnect Facebook</string>
+    <string name="import_from_facebook">Import from Facebook</string>
+    <string name="share_to_facebook">Share to Facebook</string>
+
+    <!-- Biometric -->
+    <string name="biometric_prompt_title">Authenticate</string>
+    <string name="biometric_prompt_subtitle">Use your fingerprint or face</string>
+    <string name="biometric_negative_button">Cancel</string>
+
+    <!-- Sync -->
+    <string name="sync_in_progress">Syncing…</string>
+    <string name="sync_complete">Sync complete</string>
+    <string name="sync_failed">Sync failed</string>
+    <string name="last_sync">Last sync: %s</string>
+
+    <!-- Errors -->
+    <string name="error_generic">Something went wrong</string>
+    <string name="error_network">Network error. Check your connection.</string>
+    <string name="error_authentication">Authentication failed</string>
+    <string name="error_encryption">Encryption error</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_back">Back</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_more">More options</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_filter">Filter</string>
+    <string name="cd_add_photo">Add photo</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_share">Share</string>
+</resources>
