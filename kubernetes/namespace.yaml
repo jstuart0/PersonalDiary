@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: personal-diary
+  labels:
+    app.kubernetes.io/name: personal-diary
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    description: "Personal Diary Platform - Dual-tier encrypted diary application"
+    contact: "jstuart0"
