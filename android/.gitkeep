@@ -1,0 +1,9 @@
+# Android Development
+
+This directory will contain the native Android Kotlin + Jetpack Compose application.
+
+## Structure (to be created)
+- `app/` - Main Android app module
+- `build.gradle.kts` - Project build configuration
+- `settings.gradle.kts` - Project settings
+- `gradle/` - Gradle wrapper and configuration

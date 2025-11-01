@@ -1,0 +1,11 @@
+# Kubernetes Deployment
+
+This directory will contain Kubernetes manifests and configurations for deployment to cluster 'thor'.
+
+## Structure (to be created)
+- `namespace.yaml` - personal-diary namespace
+- `postgres/` - PostgreSQL StatefulSet and services
+- `redis/` - Redis deployment and services
+- `backend/` - Backend API deployment
+- `ingress/` - Traefik ingress configuration
+- `secrets/` - Secret templates (no actual secrets)

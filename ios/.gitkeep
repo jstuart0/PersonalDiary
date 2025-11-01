@@ -1,0 +1,10 @@
+# iOS Development
+
+This directory will contain the native iOS Swift + SwiftUI application.
+
+## Structure (to be created)
+- `PersonalDiary.xcodeproj` - Xcode project
+- `PersonalDiary/` - Main app code
+- `PersonalDiaryTests/` - Unit tests
+- `PersonalDiaryUITests/` - UI tests
+- `Package.swift` - Swift Package Manager dependencies

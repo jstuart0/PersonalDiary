@@ -1,0 +1,9 @@
+# Integration and End-to-End Tests
+
+This directory will contain cross-platform integration and E2E tests.
+
+## Structure (to be created)
+- `integration/` - Cross-platform integration tests
+- `e2e/` - End-to-end user journey tests
+- `performance/` - Performance testing
+- `security/` - Security validation tests

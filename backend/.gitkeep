@@ -1,0 +1,10 @@
+# Backend Development
+
+This directory will contain the Python FastAPI backend implementation.
+
+## Structure (to be created)
+- `app/` - Main application code
+- `tests/` - Unit and integration tests
+- `requirements.txt` - Python dependencies
+- `Dockerfile` - Container configuration
+- `docker-compose.yml` - Local development setup
