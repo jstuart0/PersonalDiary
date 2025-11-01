@@ -19,6 +19,9 @@ interface SocialAccountDao {
     @Query("SELECT * FROM social_accounts WHERE accountId = :accountId")
     suspend fun getAccount(accountId: String): SocialAccountEntity?
 
+    @Query("SELECT * FROM social_accounts WHERE accountId = :accountId")
+    suspend fun getById(accountId: String): SocialAccountEntity?
+
     @Query("SELECT * FROM social_accounts WHERE userId = :userId AND platform = :platform")
     suspend fun getAccountByPlatform(userId: String, platform: String): SocialAccountEntity?
 

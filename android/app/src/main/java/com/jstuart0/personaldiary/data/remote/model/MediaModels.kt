@@ -35,27 +35,3 @@ data class MediaUploadResponse(
     @SerializedName("server_url")
     val serverUrl: String
 )
-
-data class SocialAccountDto(
-    @SerializedName("account_id")
-    val accountId: String,
-    @SerializedName("platform")
-    val platform: String,
-    @SerializedName("platform_user_id")
-    val platformUserId: String,
-    @SerializedName("platform_username")
-    val platformUsername: String,
-    @SerializedName("is_active")
-    val isActive: Boolean,
-    @SerializedName("last_sync_at")
-    val lastSyncAt: Long?,
-    @SerializedName("created_at")
-    val createdAt: Long
-)
-
-data class ConnectSocialAccountRequest(
-    @SerializedName("platform")
-    val platform: String,
-    @SerializedName("access_token")
-    val accessToken: String
-)

@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jstuart0.personaldiary.BuildConfig
-import com.jstuart0.personaldiary.domain.model.SocialProvider
+import com.jstuart0.personaldiary.domain.model.SocialPlatform
 
 /**
  * Settings screen
@@ -87,7 +87,7 @@ fun SettingsScreen(
                 )
             }
 
-            HorizontalDivider()
+            Divider()
 
             // Security Section
             SettingsSection(title = "Security") {
@@ -130,7 +130,7 @@ fun SettingsScreen(
                 }
             }
 
-            HorizontalDivider()
+            Divider()
 
             // Social Accounts Section
             SettingsSection(title = "Social Accounts") {
@@ -154,7 +154,7 @@ fun SettingsScreen(
                 // TODO: Add connect Facebook button
             }
 
-            HorizontalDivider()
+            Divider()
 
             // About Section
             SettingsSection(title = "About") {
@@ -390,7 +390,7 @@ fun SettingsSwitchItem(
 
 @Composable
 fun SocialAccountItem(
-    provider: SocialProvider,
+    provider: SocialPlatform,
     displayName: String,
     onDisconnect: () -> Unit
 ) {
@@ -402,7 +402,7 @@ fun SocialAccountItem(
     ) {
         Icon(
             when (provider) {
-                SocialProvider.FACEBOOK -> Icons.Default.Facebook
+                SocialPlatform.FACEBOOK -> Icons.Default.Facebook
                 else -> Icons.Default.Link
             },
             contentDescription = null,

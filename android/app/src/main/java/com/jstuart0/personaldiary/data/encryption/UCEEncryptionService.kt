@@ -72,15 +72,17 @@ class UCEEncryptionService @Inject constructor() : EncryptionService {
         val salt = Base64.decode(saltBase64, Base64.NO_WRAP)
 
         return try {
-            // Use pbkdf method for raw bytes instead of hash string
-            argon2.pbkdf(
-                password.toCharArray(),
-                salt,
+            // Use hash method with proper parameters for string output
+            val hashString = argon2.hash(
                 ARGON2_ITERATIONS,
                 ARGON2_MEMORY,
                 ARGON2_PARALLELISM,
-                KEY_LENGTH
+                password,
+                Charsets.UTF_8
             )
+
+            // Convert hash string to bytes and take the first KEY_LENGTH bytes
+            hashString.toByteArray(Charsets.UTF_8).copyOf(KEY_LENGTH)
         } finally {
             argon2.wipeArray(password.toCharArray())
         }
@@ -174,8 +176,8 @@ class UCEEncryptionService @Inject constructor() : EncryptionService {
         val iv = cipher.iv
         val encryptedMasterKey = cipher.doFinal(masterKeyBytes)
 
-        // Combine salt + iv + encrypted master key
-        val combined = salt.toByteArray(Charsets.UTF_8) + ":" +
+        // Combine salt + iv + encrypted master key as string
+        val combined = salt + ":" +
                       Base64.encodeToString(iv, Base64.NO_WRAP) + ":" +
                       Base64.encodeToString(encryptedMasterKey, Base64.NO_WRAP)
 

@@ -21,3 +21,14 @@ enum class SocialPlatform {
     INSTAGRAM, // Future
     TWITTER    // Future
 }
+
+/**
+ * Imported post from social media
+ */
+data class ImportedPost(
+    val postId: String,
+    val message: String?,
+    val createdTime: Long,
+    val permalink: String?,
+    val attachments: List<String>? = null
+)

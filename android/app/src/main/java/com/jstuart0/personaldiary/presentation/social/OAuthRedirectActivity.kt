@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.jstuart0.personaldiary.data.repository.SocialRepository
-import com.jstuart0.personaldiary.domain.model.SocialProvider
+import com.jstuart0.personaldiary.domain.model.SocialPlatform
 import com.jstuart0.personaldiary.presentation.theme.PersonalDiaryTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -38,7 +38,7 @@ class OAuthRedirectActivity : ComponentActivity() {
 
         // Parse provider from URI
         val provider = when {
-            uri.toString().contains("facebook") -> SocialProvider.FACEBOOK
+            uri.toString().contains("facebook") -> SocialPlatform.FACEBOOK
             else -> {
                 finish()
                 return
@@ -94,7 +94,7 @@ class OAuthRedirectActivity : ComponentActivity() {
 
 @Composable
 fun OAuthCallbackScreen(
-    provider: SocialProvider,
+    provider: SocialPlatform,
     code: String,
     state: String,
     onComplete: (Boolean) -> Unit
@@ -111,7 +111,7 @@ fun OAuthCallbackScreen(
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                socialRepository?.handleOAuthCallback(provider, code, state)
+                socialRepository?.handleOAuthCallback("current_user_id", provider, code, state ?: "")
                     ?.onSuccess {
                         isProcessing = false
                         onComplete(true)

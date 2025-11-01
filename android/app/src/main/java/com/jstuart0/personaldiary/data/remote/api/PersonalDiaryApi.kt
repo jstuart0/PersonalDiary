@@ -124,4 +124,29 @@ interface PersonalDiaryApi {
     suspend fun shareToFacebook(
         @Body request: Map<String, String> // Contains entry_id and any custom message
     ): Response<Map<String, String>> // Returns post_url
+
+    // ==================== Social OAuth ====================
+
+    @POST("social/oauth/exchange")
+    suspend fun exchangeSocialToken(
+        @Query("provider") provider: String,
+        @Query("code") code: String,
+        @Query("redirect_uri") redirectUri: String
+    ): Response<SocialTokenResponse>
+
+    @POST("social/share")
+    suspend fun shareToSocial(
+        @Query("provider") provider: String,
+        @Query("account_id") accountId: String,
+        @Query("message") message: String,
+        @Query("link") link: String? = null
+    ): Response<SocialShareResponse>
+
+    @POST("social/import")
+    suspend fun importFromSocial(
+        @Query("provider") provider: String,
+        @Query("account_id") accountId: String,
+        @Query("since") since: Long? = null,
+        @Query("limit") limit: Int = 100
+    ): Response<SocialImportResponse>
 }

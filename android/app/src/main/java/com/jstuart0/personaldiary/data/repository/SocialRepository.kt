@@ -8,7 +8,8 @@ import com.jstuart0.personaldiary.data.local.dao.SocialAccountDao
 import com.jstuart0.personaldiary.data.local.entity.SocialAccountEntity
 import com.jstuart0.personaldiary.data.remote.api.PersonalDiaryApi
 import com.jstuart0.personaldiary.domain.model.SocialAccount
-import com.jstuart0.personaldiary.domain.model.SocialProvider
+import com.jstuart0.personaldiary.domain.model.SocialPlatform
+import com.jstuart0.personaldiary.domain.model.ImportedPost
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -35,8 +36,8 @@ class SocialRepository @Inject constructor(
     /**
      * Get all connected social accounts
      */
-    fun getSocialAccounts(): Flow<List<SocialAccount>> {
-        return socialAccountDao.getAllFlow().map { entities ->
+    fun getSocialAccounts(userId: String): Flow<List<SocialAccount>> {
+        return socialAccountDao.getAccountsForUser(userId).map { entities ->
             entities.map { it.toDomain() }
         }
     }
@@ -44,8 +45,8 @@ class SocialRepository @Inject constructor(
     /**
      * Get social account by provider
      */
-    suspend fun getSocialAccount(provider: SocialProvider): SocialAccount? {
-        return socialAccountDao.getByProvider(provider.name)?.toDomain()
+    suspend fun getSocialAccount(userId: String, platform: SocialPlatform): SocialAccount? {
+        return socialAccountDao.getAccountByPlatform(userId, platform.name)?.toDomain()
     }
 
     /**
@@ -76,16 +77,17 @@ class SocialRepository @Inject constructor(
      * Handle OAuth callback
      */
     suspend fun handleOAuthCallback(
-        provider: SocialProvider,
+        userId: String,
+        platform: SocialPlatform,
         code: String,
         state: String
     ): Result<SocialAccount> {
         return try {
             // Exchange code for access token via backend
             val response = api.exchangeSocialToken(
-                provider = provider.name.lowercase(),
+                provider = platform.name.lowercase(),
                 code = code,
-                redirectUri = getRedirectUri(provider)
+                redirectUri = getRedirectUri(platform)
             )
 
             if (!response.isSuccessful || response.body() == null) {
@@ -97,19 +99,15 @@ class SocialRepository @Inject constructor(
             // Save social account
             val account = SocialAccount(
                 accountId = tokenData.accountId,
-                userId = tokenData.userId,
-                provider = provider,
-                providerUserId = tokenData.providerUserId,
-                displayName = tokenData.displayName,
-                email = tokenData.email,
-                profilePictureUrl = tokenData.profilePictureUrl,
-                accessToken = tokenData.accessToken,
-                refreshToken = tokenData.refreshToken,
-                expiresAt = System.currentTimeMillis() + (tokenData.expiresIn * 1000),
-                connectedAt = System.currentTimeMillis()
+                platform = platform,
+                platformUserId = tokenData.providerUserId,
+                platformUsername = tokenData.displayName ?: "",
+                isActive = true,
+                lastSyncAt = null,
+                createdAt = System.currentTimeMillis()
             )
 
-            socialAccountDao.insert(SocialAccountEntity.fromDomain(account))
+            socialAccountDao.insert(SocialAccountEntity.fromDomain(account, userId))
 
             Result.success(account)
         } catch (e: Exception) {
@@ -153,7 +151,7 @@ class SocialRepository @Inject constructor(
                 ?: return Result.failure(Exception("Account not found"))
 
             val response = api.shareToSocial(
-                provider = SocialProvider.FACEBOOK.name.lowercase(),
+                provider = SocialPlatform.FACEBOOK.name.lowercase(),
                 accountId = accountId,
                 message = message,
                 link = link
@@ -180,7 +178,7 @@ class SocialRepository @Inject constructor(
     ): Result<List<ImportedPost>> {
         return try {
             val response = api.importFromSocial(
-                provider = SocialProvider.FACEBOOK.name.lowercase(),
+                provider = SocialPlatform.FACEBOOK.name.lowercase(),
                 accountId = accountId,
                 since = since,
                 limit = limit
@@ -222,10 +220,10 @@ class SocialRepository @Inject constructor(
     /**
      * Get redirect URI for provider
      */
-    private fun getRedirectUri(provider: SocialProvider): String {
-        return when (provider) {
-            SocialProvider.FACEBOOK -> FACEBOOK_REDIRECT_URI
-            else -> "personaldiary://oauth/${provider.name.lowercase()}"
+    private fun getRedirectUri(platform: SocialPlatform): String {
+        return when (platform) {
+            SocialPlatform.FACEBOOK -> FACEBOOK_REDIRECT_URI
+            else -> "personaldiary://oauth/${platform.name.lowercase()}"
         }
     }
 

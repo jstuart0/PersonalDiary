@@ -46,7 +46,7 @@ fun SyncConflictDialog(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                HorizontalDivider()
+                Divider()
 
                 // Local version
                 ConflictVersionCard(
@@ -55,7 +55,7 @@ fun SyncConflictDialog(
                     icon = Icons.Default.PhoneAndroid
                 )
 
-                HorizontalDivider()
+                Divider()
 
                 // Server version
                 ConflictVersionCard(
