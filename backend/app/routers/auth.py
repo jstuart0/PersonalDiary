@@ -74,7 +74,6 @@ async def get_current_user(
 
 @router.post(
     "/signup",
-    response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register new user",
     description="Create a new user account with chosen encryption tier (E2E or UCE)",
@@ -103,22 +102,46 @@ async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         )
         refresh_token = auth_service.create_refresh_token(user.id)
 
-        response = TokenResponse(
-            user_id=user.id,
-            email=user.email,
-            encryption_tier=user.encryption_tier,
-            jwt_token=access_token,
-            refresh_token=refresh_token,
-        )
+        # Build response in format expected by web app
+        response = {
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "encryptionTier": user.encryption_tier.value,
+                "createdAt": user.created_at.isoformat(),
+                "updatedAt": user.updated_at.isoformat(),
+            },
+            "tokens": {
+                "accessToken": access_token,
+                "refreshToken": refresh_token,
+                "expiresIn": 900,  # 15 minutes
+            }
+        }
 
         # Add tier-specific fields
         if user.encryption_tier == EncryptionTier.E2E:
-            response.public_key = user.e2e_public_key
-            response.recovery_codes = recovery_codes
+            response["user"]["publicKey"] = user.e2e_public_key
+            if recovery_codes:
+                response["recoveryCodes"] = recovery_codes
         else:
-            response.encrypted_master_key = user.uce_encrypted_master_key
+            response["user"]["encryptedMasterKey"] = user.uce_encrypted_master_key
+            response["user"]["keyDerivationSalt"] = user.uce_key_derivation_salt
 
         logger.info(f"User signup successful: {user.email} ({user.encryption_tier.value})")
+
+        # Send welcome email (async, don't wait for it)
+        try:
+            await auth_service.send_verification_email(db, user)
+            from app.services.email import email_service
+            await email_service.send_welcome_email(
+                to_email=user.email,
+                user_name=user.display_name,
+                encryption_tier=user.encryption_tier.value.upper()
+            )
+        except Exception as email_error:
+            # Log but don't fail signup if email fails
+            logger.warning(f"Failed to send welcome/verification email: {str(email_error)}")
+
         return response
 
     except ValueError as e:
@@ -134,7 +157,6 @@ async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.post(
     "/login",
-    response_model=TokenResponse,
     summary="Login user",
     description="Authenticate user and receive JWT tokens",
 )
@@ -149,19 +171,28 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
             db=db, email=credentials.email, password=credentials.password
         )
 
-        response = TokenResponse(
-            user_id=user.id,
-            email=user.email,
-            encryption_tier=user.encryption_tier,
-            jwt_token=access_token,
-            refresh_token=refresh_token,
-        )
+        # Build response in format expected by web app
+        response = {
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "encryptionTier": user.encryption_tier.value,
+                "createdAt": user.created_at.isoformat(),
+                "updatedAt": user.updated_at.isoformat(),
+            },
+            "tokens": {
+                "accessToken": access_token,
+                "refreshToken": refresh_token,
+                "expiresIn": 900,  # 15 minutes
+            }
+        }
 
         # Add tier-specific fields
         if user.encryption_tier == EncryptionTier.E2E:
-            response.public_key = user.e2e_public_key
+            response["user"]["publicKey"] = user.e2e_public_key
         else:
-            response.encrypted_master_key = user.uce_encrypted_master_key
+            response["user"]["encryptedMasterKey"] = user.uce_encrypted_master_key
+            response["user"]["keyDerivationSalt"] = user.uce_key_derivation_salt
 
         logger.info(f"User login successful: {user.email}")
         return response
@@ -331,3 +362,171 @@ async def logout(current_user=Depends(get_current_user)):
     """
     logger.info(f"User logout: {current_user.email}")
     return {"message": "Logged out successfully"}
+
+
+@router.post(
+    "/verify-email",
+    response_model=dict,
+    summary="Verify email address",
+    description="Verify user email with verification token",
+)
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    """
+    Verify user email address with verification token.
+
+    Token is sent to user's email after signup.
+    """
+    try:
+        user = await auth_service.verify_email_token(db, token)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification token",
+            )
+
+        logger.info(f"Email verified for user: {user.email}")
+        return {
+            "message": "Email verified successfully",
+            "email": user.email,
+            "verified": True
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Email verification error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Email verification failed",
+        )
+
+
+@router.post(
+    "/resend-verification",
+    response_model=dict,
+    summary="Resend verification email",
+    description="Resend verification email to user",
+)
+async def resend_verification(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Resend verification email to current user.
+
+    Only works if user is not already verified.
+    """
+    try:
+        if current_user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already verified",
+            )
+
+        # Send verification email
+        success = await auth_service.send_verification_email(db, current_user)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send verification email",
+            )
+
+        logger.info(f"Verification email resent to: {current_user.email}")
+        return {"message": "Verification email sent successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Resend verification error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to resend verification email",
+        )
+
+
+@router.post(
+    "/forgot-password",
+    response_model=dict,
+    summary="Request password reset",
+    description="Request password reset email",
+)
+async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
+    """
+    Request password reset email.
+
+    Sends password reset email if user exists. Always returns success
+    to prevent email enumeration attacks.
+    """
+    try:
+        # Find user by email
+        user = await auth_service.get_user_by_email(db, email)
+
+        if user:
+            # Send password reset email
+            await auth_service.send_password_reset_email(db, user)
+            logger.info(f"Password reset email sent to: {email}")
+        else:
+            # Don't reveal if user exists or not
+            logger.warning(f"Password reset requested for non-existent email: {email}")
+
+        # Always return success to prevent email enumeration
+        return {
+            "message": "If an account exists with this email, a password reset link has been sent"
+        }
+
+    except Exception as e:
+        logger.error(f"Forgot password error: {str(e)}")
+        # Still return success to prevent information disclosure
+        return {
+            "message": "If an account exists with this email, a password reset link has been sent"
+        }
+
+
+@router.post(
+    "/reset-password",
+    response_model=dict,
+    summary="Reset password",
+    description="Reset password using reset token",
+)
+async def reset_password(
+    token: str,
+    new_password: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reset password using reset token.
+
+    Token is sent to user's email after requesting password reset.
+    """
+    try:
+        # Validate password length
+        if len(new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 8 characters",
+            )
+
+        user = await auth_service.reset_password(db, token, new_password)
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token",
+            )
+
+        logger.info(f"Password reset successful for user: {user.email}")
+        return {
+            "message": "Password reset successfully",
+            "email": user.email
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Password reset error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password reset failed",
+        )

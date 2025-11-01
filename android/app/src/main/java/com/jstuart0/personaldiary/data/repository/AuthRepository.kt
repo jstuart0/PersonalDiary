@@ -86,17 +86,17 @@ class AuthRepository @Inject constructor(
 
                 // Save tokens
                 tokenManager.saveTokens(
-                    signupResponse.accessToken,
-                    signupResponse.refreshToken
+                    signupResponse.tokens.accessToken,
+                    signupResponse.tokens.refreshToken
                 )
 
                 // Save user locally
                 val user = User(
-                    userId = signupResponse.userId,
-                    email = signupResponse.email,
+                    userId = signupResponse.user.id,
+                    email = signupResponse.user.email,
                     encryptionTier = encryptionTier,
-                    publicKey = request.publicKey,
-                    encryptedMasterKey = request.encryptedMasterKey,
+                    publicKey = signupResponse.user.publicKey,
+                    encryptedMasterKey = signupResponse.user.encryptedMasterKey,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
                 )
@@ -106,12 +106,9 @@ class AuthRepository @Inject constructor(
                 when (encryptionTier) {
                     EncryptionTier.E2E -> e2eEncryptionService.initialize(user.userId)
                     EncryptionTier.UCE -> {
-                        // For UCE, we need the encrypted master key from the request
-                        val encryptedMasterKey = request.encryptedMasterKey ?: ""
-                        // Extract salt from the encrypted master key (it's the first part)
-                        val decodedData = String(Base64.decode(encryptedMasterKey, Base64.NO_WRAP), Charsets.UTF_8)
-                        val parts = decodedData.split(":")
-                        val salt = if (parts.isNotEmpty()) parts[0] else ""
+                        // For UCE, use the salt from the response
+                        val encryptedMasterKey = signupResponse.user.encryptedMasterKey ?: ""
+                        val salt = signupResponse.user.keyDerivationSalt ?: ""
                         uceEncryptionService.initialize(password, encryptedMasterKey, salt)
                     }
                 }
@@ -138,18 +135,18 @@ class AuthRepository @Inject constructor(
 
                 // Save tokens
                 tokenManager.saveTokens(
-                    loginResponse.accessToken,
-                    loginResponse.refreshToken
+                    loginResponse.tokens.accessToken,
+                    loginResponse.tokens.refreshToken
                 )
 
                 // Save user locally
-                val encryptionTier = EncryptionTier.valueOf(loginResponse.encryptionTier)
+                val encryptionTier = EncryptionTier.valueOf(loginResponse.user.encryptionTier)
                 val user = User(
-                    userId = loginResponse.userId,
-                    email = loginResponse.email,
+                    userId = loginResponse.user.id,
+                    email = loginResponse.user.email,
                     encryptionTier = encryptionTier,
-                    publicKey = loginResponse.publicKey,
-                    encryptedMasterKey = loginResponse.encryptedMasterKey,
+                    publicKey = loginResponse.user.publicKey,
+                    encryptedMasterKey = loginResponse.user.encryptedMasterKey,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
                 )
@@ -159,12 +156,9 @@ class AuthRepository @Inject constructor(
                 when (encryptionTier) {
                     EncryptionTier.E2E -> e2eEncryptionService.initialize(user.userId)
                     EncryptionTier.UCE -> {
-                        // For UCE, we need the encrypted master key from the response
-                        val encryptedMasterKey = loginResponse.encryptedMasterKey ?: ""
-                        // Extract salt from the encrypted master key (it's the first part)
-                        val decodedData = String(Base64.decode(encryptedMasterKey, Base64.NO_WRAP), Charsets.UTF_8)
-                        val parts = decodedData.split(":")
-                        val salt = if (parts.isNotEmpty()) parts[0] else ""
+                        // For UCE, use the salt from the response
+                        val encryptedMasterKey = loginResponse.user.encryptedMasterKey ?: ""
+                        val salt = loginResponse.user.keyDerivationSalt ?: ""
                         uceEncryptionService.initialize(password, encryptedMasterKey, salt)
                     }
                 }
@@ -228,17 +222,17 @@ class AuthRepository @Inject constructor(
 
                 // Save tokens
                 tokenManager.saveTokens(
-                    loginResponse.accessToken,
-                    loginResponse.refreshToken
+                    loginResponse.tokens.accessToken,
+                    loginResponse.tokens.refreshToken
                 )
 
                 // Save user locally
                 val user = User(
-                    userId = loginResponse.userId,
-                    email = loginResponse.email,
-                    encryptionTier = EncryptionTier.valueOf(loginResponse.encryptionTier),
-                    publicKey = loginResponse.publicKey,
-                    encryptedMasterKey = loginResponse.encryptedMasterKey,
+                    userId = loginResponse.user.id,
+                    email = loginResponse.user.email,
+                    encryptionTier = EncryptionTier.valueOf(loginResponse.user.encryptionTier),
+                    publicKey = loginResponse.user.publicKey,
+                    encryptedMasterKey = loginResponse.user.encryptedMasterKey,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
                 )

@@ -5,6 +5,7 @@ from app.models.entry import Entry, EntryEvent, Tag
 from app.models.media import Media
 from app.models.integration import IntegrationAccount, ExternalPost
 from app.models.e2e import E2EPublicKey, E2ERecoveryCode
+from app.models.token import Token, TokenType
 
 __all__ = [
     "User",
@@ -16,4 +17,6 @@ __all__ = [
     "ExternalPost",
     "E2EPublicKey",
     "E2ERecoveryCode",
+    "Token",
+    "TokenType",
 ]

@@ -13,7 +13,9 @@ from sqlalchemy.future import select
 from app.config import settings
 from app.models.user import User, EncryptionTier
 from app.models.e2e import E2EPublicKey, E2ERecoveryCode
+from app.models.token import Token, TokenType
 from app.services.encryption import E2EEncryption, UCEEncryption
+from app.services.email import email_service
 
 
 class AuthService:
@@ -349,3 +351,216 @@ class AuthService:
         """
         result = await db.execute(select(User).filter(User.email == email))
         return result.scalar_one_or_none()
+
+    async def create_verification_token(
+        self, db: AsyncSession, user_id: UUID
+    ) -> str:
+        """
+        Create email verification token.
+
+        Args:
+            db: Database session
+            user_id: User ID
+
+        Returns:
+            Verification token
+        """
+        # Generate secure token
+        token_value = secrets.token_urlsafe(32)
+
+        # Create token record (expires in 24 hours)
+        token = Token(
+            token=token_value,
+            token_type=TokenType.EMAIL_VERIFICATION,
+            user_id=user_id,
+            expires_at=datetime.utcnow() + timedelta(hours=24)
+        )
+
+        db.add(token)
+        await db.commit()
+
+        return token_value
+
+    async def verify_email_token(
+        self, db: AsyncSession, token_value: str
+    ) -> Optional[User]:
+        """
+        Verify email verification token and mark user as verified.
+
+        Args:
+            db: Database session
+            token_value: Verification token
+
+        Returns:
+            User if token is valid, None otherwise
+        """
+        # Find token
+        result = await db.execute(
+            select(Token).filter(
+                Token.token == token_value,
+                Token.token_type == TokenType.EMAIL_VERIFICATION,
+                Token.is_used == False
+            )
+        )
+        token = result.scalar_one_or_none()
+
+        if not token or not token.is_valid:
+            return None
+
+        # Mark token as used
+        token.is_used = True
+        token.used_at = datetime.utcnow()
+
+        # Get user and mark as verified
+        user = await self.get_user_by_id(db, token.user_id)
+        if user:
+            user.is_verified = True
+            await db.commit()
+            await db.refresh(user)
+
+        return user
+
+    async def create_password_reset_token(
+        self, db: AsyncSession, user_id: UUID
+    ) -> str:
+        """
+        Create password reset token.
+
+        Args:
+            db: Database session
+            user_id: User ID
+
+        Returns:
+            Reset token
+        """
+        # Generate secure token
+        token_value = secrets.token_urlsafe(32)
+
+        # Create token record (expires in 1 hour)
+        token = Token(
+            token=token_value,
+            token_type=TokenType.PASSWORD_RESET,
+            user_id=user_id,
+            expires_at=datetime.utcnow() + timedelta(hours=1)
+        )
+
+        db.add(token)
+        await db.commit()
+
+        return token_value
+
+    async def verify_reset_token(
+        self, db: AsyncSession, token_value: str
+    ) -> Optional[User]:
+        """
+        Verify password reset token.
+
+        Args:
+            db: Database session
+            token_value: Reset token
+
+        Returns:
+            User if token is valid, None otherwise
+        """
+        # Find token
+        result = await db.execute(
+            select(Token).filter(
+                Token.token == token_value,
+                Token.token_type == TokenType.PASSWORD_RESET,
+                Token.is_used == False
+            )
+        )
+        token = result.scalar_one_or_none()
+
+        if not token or not token.is_valid:
+            return None
+
+        # Get user
+        user = await self.get_user_by_id(db, token.user_id)
+        return user
+
+    async def reset_password(
+        self, db: AsyncSession, token_value: str, new_password: str
+    ) -> Optional[User]:
+        """
+        Reset user password using reset token.
+
+        Args:
+            db: Database session
+            token_value: Reset token
+            new_password: New password
+
+        Returns:
+            User if password reset successful, None otherwise
+        """
+        # Find token
+        result = await db.execute(
+            select(Token).filter(
+                Token.token == token_value,
+                Token.token_type == TokenType.PASSWORD_RESET,
+                Token.is_used == False
+            )
+        )
+        token = result.scalar_one_or_none()
+
+        if not token or not token.is_valid:
+            return None
+
+        # Mark token as used
+        token.is_used = True
+        token.used_at = datetime.utcnow()
+
+        # Get user and update password
+        user = await self.get_user_by_id(db, token.user_id)
+        if user:
+            user.password_hash = self.hash_password(new_password)
+            await db.commit()
+            await db.refresh(user)
+
+        return user
+
+    async def send_verification_email(
+        self, db: AsyncSession, user: User
+    ) -> bool:
+        """
+        Send verification email to user.
+
+        Args:
+            db: Database session
+            user: User to send verification email to
+
+        Returns:
+            True if email sent successfully
+        """
+        # Create verification token
+        token = await self.create_verification_token(db, user.id)
+
+        # Send verification email
+        return await email_service.send_verification_email(
+            to_email=user.email,
+            verification_token=token,
+            user_name=user.display_name
+        )
+
+    async def send_password_reset_email(
+        self, db: AsyncSession, user: User
+    ) -> bool:
+        """
+        Send password reset email to user.
+
+        Args:
+            db: Database session
+            user: User to send reset email to
+
+        Returns:
+            True if email sent successfully
+        """
+        # Create reset token
+        token = await self.create_password_reset_token(db, user.id)
+
+        # Send reset email
+        return await email_service.send_password_reset_email(
+            to_email=user.email,
+            reset_token=token,
+            user_name=user.display_name
+        )

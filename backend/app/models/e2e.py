@@ -4,7 +4,7 @@ from datetime import datetime
 import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.types import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -21,11 +21,11 @@ class E2EPublicKey(Base):
     __tablename__ = "e2e_public_keys"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
 
     # Foreign key to user (unique - one public key per user)
     user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True
+        UUID, ForeignKey("users.id"), nullable=False, unique=True
     )
 
     # Public key (base64 encoded)
@@ -55,10 +55,10 @@ class E2ERecoveryCode(Base):
     __tablename__ = "e2e_recovery_codes"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
 
     # Foreign key to user
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
 
     # Code hash (SHA-256 of recovery code)
     code_hash = Column(String(64), nullable=False, index=True)

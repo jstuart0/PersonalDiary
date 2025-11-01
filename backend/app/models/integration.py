@@ -15,7 +15,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.types import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -49,10 +49,10 @@ class IntegrationAccount(Base):
     __tablename__ = "integration_accounts"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4, index=True)
 
     # Foreign key to user
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
 
     # Platform
     platform = Column(Enum(Platform), nullable=False)
@@ -129,12 +129,12 @@ class ExternalPost(Base):
     __tablename__ = "external_posts"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4, index=True)
 
     # Foreign keys
-    entry_id = Column(UUID(as_uuid=True), ForeignKey("entries.id"), nullable=False)
+    entry_id = Column(UUID, ForeignKey("entries.id"), nullable=False)
     integration_account_id = Column(
-        UUID(as_uuid=True), ForeignKey("integration_accounts.id"), nullable=False
+        UUID, ForeignKey("integration_accounts.id"), nullable=False
     )
 
     # Platform (denormalized for easier querying)

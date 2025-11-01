@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
     aws_s3_bucket: str = ""
     aws_s3_endpoint_url: str | None = None
+    aws_profile: str = "AGILE"
+
+    # AWS SES Configuration
+    aws_ses_region: str = "us-east-1"
+    aws_ses_from_email: str = "no-reply@xmojo.net"
+    aws_ses_from_name: str = "Personal Diary"
 
     # Facebook OAuth Configuration
     facebook_client_id: str = ""

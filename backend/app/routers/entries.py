@@ -274,14 +274,13 @@ async def update_entry(
         # Update tags if provided
         if entry_data.tag_names is not None:
             changes["tags"] = True
-            # Remove old tags
+            # Remove old tags using delete statement
+            from sqlalchemy import delete
             await db.execute(
-                select(Tag).where(Tag.entry_id == entry.id)
+                delete(Tag).where(Tag.entry_id == entry.id)
             )
-            for old_tag in entry.tags:
-                await db.delete(old_tag)
 
-            # Add new tags
+            # Clear and add new tags
             entry.tags = []
             for tag_name in entry_data.tag_names:
                 tag = Tag(

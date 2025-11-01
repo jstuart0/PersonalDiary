@@ -19,19 +19,41 @@ data class SignupRequest(
     val encryptedMasterKey: String? = null // Required for UCE
 )
 
-data class SignupResponse(
-    @SerializedName("user_id")
-    val userId: String,
+data class UserDto(
+    @SerializedName("id")
+    val id: String,
     @SerializedName("email")
     val email: String,
-    @SerializedName("encryption_tier")
+    @SerializedName("encryptionTier")
     val encryptionTier: String,
-    @SerializedName("recovery_codes")
-    val recoveryCodes: List<String>? = null, // Only for E2E tier
-    @SerializedName("access_token")
+    @SerializedName("createdAt")
+    val createdAt: String,
+    @SerializedName("updatedAt")
+    val updatedAt: String,
+    @SerializedName("publicKey")
+    val publicKey: String? = null,
+    @SerializedName("encryptedMasterKey")
+    val encryptedMasterKey: String? = null,
+    @SerializedName("keyDerivationSalt")
+    val keyDerivationSalt: String? = null
+)
+
+data class TokensDto(
+    @SerializedName("accessToken")
     val accessToken: String,
-    @SerializedName("refresh_token")
-    val refreshToken: String
+    @SerializedName("refreshToken")
+    val refreshToken: String,
+    @SerializedName("expiresIn")
+    val expiresIn: Int
+)
+
+data class SignupResponse(
+    @SerializedName("user")
+    val user: UserDto,
+    @SerializedName("tokens")
+    val tokens: TokensDto,
+    @SerializedName("recoveryCodes")
+    val recoveryCodes: List<String>? = null // Only for E2E tier
 )
 
 data class LoginRequest(
@@ -42,20 +64,10 @@ data class LoginRequest(
 )
 
 data class LoginResponse(
-    @SerializedName("user_id")
-    val userId: String,
-    @SerializedName("email")
-    val email: String,
-    @SerializedName("encryption_tier")
-    val encryptionTier: String,
-    @SerializedName("public_key")
-    val publicKey: String? = null,
-    @SerializedName("encrypted_master_key")
-    val encryptedMasterKey: String? = null,
-    @SerializedName("access_token")
-    val accessToken: String,
-    @SerializedName("refresh_token")
-    val refreshToken: String
+    @SerializedName("user")
+    val user: UserDto,
+    @SerializedName("tokens")
+    val tokens: TokensDto
 )
 
 data class RefreshTokenRequest(
@@ -64,10 +76,8 @@ data class RefreshTokenRequest(
 )
 
 data class RefreshTokenResponse(
-    @SerializedName("access_token")
-    val accessToken: String,
-    @SerializedName("refresh_token")
-    val refreshToken: String
+    @SerializedName("tokens")
+    val tokens: TokensDto
 )
 
 data class PasswordResetRequest(

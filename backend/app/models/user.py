@@ -5,11 +5,11 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, String, Text
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
 
 from app.database import Base
+from app.models.types import UUID
 
 
 class EncryptionTier(str, enum.Enum):
@@ -30,7 +30,7 @@ class User(Base):
     __tablename__ = "users"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4, index=True)
 
     # Basic information
     email = Column(String(255), unique=True, nullable=False, index=True)

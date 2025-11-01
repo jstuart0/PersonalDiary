@@ -15,10 +15,10 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import TSVECTOR, UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models.types import UUID
 
 
 class EntrySource(str, enum.Enum):
@@ -52,10 +52,10 @@ class Entry(Base):
     __tablename__ = "entries"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4, index=True)
 
     # Foreign key to user
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
 
     # Encrypted content
     encrypted_content = Column(Text, nullable=False)
@@ -85,9 +85,6 @@ class Entry(Base):
     mood = Column(Enum(EntryMood), nullable=True)
     weather = Column(JSON, nullable=True)
 
-    # Full-text search vector (for UCE users only)
-    search_vector = Column(TSVECTOR, nullable=True)
-
     # Relationships
     user = relationship("User", back_populates="entries")
     tags = relationship("Tag", back_populates="entry", cascade="all, delete-orphan")
@@ -104,7 +101,6 @@ class Entry(Base):
         Index("idx_user_created", "user_id", "created_at"),
         Index("idx_user_deleted", "user_id", "deleted_at"),
         Index("idx_content_hash", "content_hash"),
-        Index("idx_search_vector", "search_vector", postgresql_using="gin"),
     )
 
     def __repr__(self):
@@ -126,10 +122,10 @@ class Tag(Base):
     __tablename__ = "tags"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
 
     # Foreign key to entry
-    entry_id = Column(UUID(as_uuid=True), ForeignKey("entries.id"), nullable=False)
+    entry_id = Column(UUID, ForeignKey("entries.id"), nullable=False)
 
     # Tag name (case-insensitive, normalized to lowercase)
     tag_name = Column(String(100), nullable=False)
@@ -175,10 +171,10 @@ class EntryEvent(Base):
     __tablename__ = "entry_events"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
 
     # Foreign key to entry
-    entry_id = Column(UUID(as_uuid=True), ForeignKey("entries.id"), nullable=False)
+    entry_id = Column(UUID, ForeignKey("entries.id"), nullable=False)
 
     # Event type
     event_type = Column(Enum(EventType), nullable=False)

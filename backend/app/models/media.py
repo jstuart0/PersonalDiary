@@ -4,7 +4,7 @@ from datetime import datetime
 import uuid
 
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.types import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -20,12 +20,12 @@ class Media(Base):
     __tablename__ = "media"
 
     # Primary key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4, index=True)
 
     # Foreign keys
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     entry_id = Column(
-        UUID(as_uuid=True), ForeignKey("entries.id"), nullable=True
+        UUID, ForeignKey("entries.id"), nullable=True
     )  # Nullable to allow upload before entry creation
 
     # Encrypted file reference (S3 key or file path)

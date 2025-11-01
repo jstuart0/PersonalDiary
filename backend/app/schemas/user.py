@@ -63,8 +63,9 @@ class TokenResponse(BaseModel):
     user_id: UUID
     email: str
     encryption_tier: EncryptionTier
-    jwt_token: str
+    access_token: str  # Changed from jwt_token to access_token for web app compatibility
     refresh_token: str
+    expires_in: int = 900  # Default 15 minutes in seconds
 
     # Tier-specific fields
     encrypted_master_key: Optional[str] = None  # For UCE tier

@@ -126,8 +126,7 @@ class UCEEncryption:
             length=32,  # 256-bit key
             iterations=settings.argon2_time_cost,
             lanes=settings.argon2_parallelism,
-            memory_size=settings.argon2_memory_cost,
-            backend=self.backend,
+            memory_cost=settings.argon2_memory_cost,
         )
         return kdf.derive(password.encode())
 

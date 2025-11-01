@@ -6,12 +6,13 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.database import get_db
-from app.models.entry import Entry
+from app.models.entry import Entry, Tag
 from app.models.user import User
 from app.routers.auth import get_current_user
 from app.schemas.search import SearchQuery, SearchResponse, SearchResultItem, SearchStatsResponse
@@ -21,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 uce_encryption = UCEEncryption()
+
+
+def is_postgres() -> bool:
+    """Check if using PostgreSQL database"""
+    return 'postgresql' in settings.database_url.lower()
 
 
 @router.post(
@@ -63,16 +69,42 @@ async def search_entries(
 
         # Apply text search if query provided
         if query.query.strip():
-            # Use PostgreSQL full-text search with ts_vector
-            search_query = func.plainto_tsquery("english", query.query)
-            stmt = stmt.where(Entry.search_vector.op("@@")(search_query))
+            if is_postgres():
+                # Use PostgreSQL full-text search with ts_vector
+                search_query = func.plainto_tsquery("english", query.query)
+                stmt = stmt.where(Entry.search_vector.op("@@")(search_query))
 
-            # Add relevance ranking
-            rank = func.ts_rank(Entry.search_vector, search_query).label("rank")
-            stmt = stmt.add_columns(rank).order_by(rank.desc())
+                # Add relevance ranking
+                rank = func.ts_rank(Entry.search_vector, search_query).label("rank")
+                stmt = stmt.add_columns(rank).order_by(rank.desc())
+            else:
+                # SQLite fallback: Search in tags only
+                # This is simplified for development - search is limited to tags
+                search_terms = [term.strip().lower() for term in query.query.split() if term.strip()]
+
+                if search_terms:
+                    # Get entry IDs that have matching tags
+                    tag_entry_ids = set()
+                    for term in search_terms:
+                        tag_query = select(Tag.entry_id).where(
+                            Tag.tag_name.contains(term)
+                        )
+                        tag_result = await db.execute(tag_query)
+                        tag_ids = [row[0] for row in tag_result.all()]
+                        tag_entry_ids.update(tag_ids)
+
+                    # Filter entries to those with matching tags
+                    if tag_entry_ids:
+                        stmt = stmt.where(Entry.id.in_(tag_entry_ids))
+
+                # Add ranking column and sort by date
+                from sqlalchemy import literal
+                stmt = stmt.add_columns(literal(1.0).label("rank"))
+                stmt = stmt.order_by(Entry.created_at.desc())
         else:
             # No search query, just filter and sort by date
-            stmt = stmt.add_columns(func.cast(1.0, type_=type(1.0)).label("rank"))
+            from sqlalchemy import literal
+            stmt = stmt.add_columns(literal(1.0).label("rank"))
             stmt = stmt.order_by(Entry.created_at.desc())
 
         # Apply filters
@@ -84,8 +116,6 @@ async def search_entries(
 
         if query.tag_filter:
             # Join with tags
-            from app.models.entry import Tag
-
             for tag_name in query.tag_filter:
                 stmt = stmt.join(Tag).where(Tag.tag_name == tag_name.lower().strip())
 
@@ -164,10 +194,12 @@ async def search_entries(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Search error: {str(e)}")
+        import traceback
+        error_traceback = traceback.format_exc()
+        logger.error(f"Search error: {str(e)}\n{error_traceback}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Search failed",
+            detail=f"Search failed: {str(e)}",
         )
 
 
@@ -275,22 +307,24 @@ async def get_search_stats(
         total_result = await db.execute(total_stmt)
         total_entries = total_result.scalar()
 
-        # Get searchable entries (with non-null search_vector)
-        searchable_stmt = select(func.count()).where(
-            Entry.user_id == current_user.id,
-            Entry.deleted_at.is_(None),
-            Entry.search_vector.isnot(None),
-        )
+        # Get searchable entries (with non-null search_vector for PostgreSQL, all for SQLite)
+        if is_postgres():
+            searchable_stmt = select(func.count()).where(
+                Entry.user_id == current_user.id,
+                Entry.deleted_at.is_(None),
+                Entry.search_vector.isnot(None),
+            )
+        else:
+            # SQLite: all entries are searchable (no search_vector column)
+            searchable_stmt = total_stmt
+
         searchable_result = await db.execute(searchable_stmt)
         searchable_entries = searchable_result.scalar()
 
-        # Get last indexed entry
+        # Get last updated entry
         last_indexed_stmt = (
             select(Entry.updated_at)
-            .where(
-                Entry.user_id == current_user.id,
-                Entry.search_vector.isnot(None),
-            )
+            .where(Entry.user_id == current_user.id)
             .order_by(Entry.updated_at.desc())
             .limit(1)
         )
