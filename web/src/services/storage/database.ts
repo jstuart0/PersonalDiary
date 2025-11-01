@@ -273,7 +273,7 @@ export class DatabaseService {
     return entries.filter((entry) => entry.userId === userId && !entry.deletedAt);
   }
 
-  async getUnsynced Entries(userId: string): Promise<Entry[]> {
+  async getUnsyncedEntries(userId: string): Promise<Entry[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     const allEntries = await this.getAllEntries(userId);

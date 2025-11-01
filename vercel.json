@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "name": "personal-diary",
+  "builds": [
+    {
+      "src": "web/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://api.diary.xmojo.net/api/v1/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/web/$1"
+    }
+  ],
+  "env": {
+    "VITE_API_BASE_URL": "https://api.diary.xmojo.net/api/v1"
+  },
+  "regions": ["iad1"],
+  "framework": "vite"
+}

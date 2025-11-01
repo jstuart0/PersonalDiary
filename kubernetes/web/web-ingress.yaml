@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: personal-diary-web-ingress
+  namespace: personal-diary
+  labels:
+    app: personal-diary-web
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    traefik.ingress.kubernetes.io/router.middlewares: default-secure-headers@kubernetescrd
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - diary.xmojo.net
+    secretName: diary-xmojo-net-tls
+  rules:
+  - host: diary.xmojo.net
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: personal-diary-web
+            port:
+              number: 80
