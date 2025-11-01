@@ -10,8 +10,11 @@ import androidx.room.PrimaryKey
  *
  * Note: This data is stored unencrypted locally for search purposes
  * It is only accessible on the device and cleared when user logs out
+ *
+ * This is a standalone FTS4 table, not linked to a content entity
+ * to avoid field mapping issues between encrypted and decrypted content.
  */
-@Fts4(contentEntity = EntryEntity::class)
+@Fts4
 @Entity(tableName = "entries_fts")
 data class EntryFtsEntity(
     @PrimaryKey

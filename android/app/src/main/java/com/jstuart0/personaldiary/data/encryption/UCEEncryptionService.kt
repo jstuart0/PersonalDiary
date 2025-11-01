@@ -72,16 +72,15 @@ class UCEEncryptionService @Inject constructor() : EncryptionService {
         val salt = Base64.decode(saltBase64, Base64.NO_WRAP)
 
         return try {
-            val hash = argon2.hash(
+            // Use pbkdf method for raw bytes instead of hash string
+            argon2.pbkdf(
+                password.toCharArray(),
+                salt,
                 ARGON2_ITERATIONS,
                 ARGON2_MEMORY,
                 ARGON2_PARALLELISM,
-                password.toCharArray(),
-                salt
+                KEY_LENGTH
             )
-
-            // Convert hash to raw bytes
-            hash.toByteArray(Charsets.UTF_8).copyOf(KEY_LENGTH)
         } finally {
             argon2.wipeArray(password.toCharArray())
         }
@@ -151,6 +150,36 @@ class UCEEncryptionService @Inject constructor() : EncryptionService {
 
     override fun getEncryptionTier(): EncryptionTier {
         return EncryptionTier.UCE
+    }
+
+    /**
+     * Generate master key and encrypt it with password-derived key
+     * Returns encrypted master key with salt
+     */
+    fun deriveAndEncryptMasterKey(password: String): String {
+        // Generate a random master key
+        val masterKeyBytes = ByteArray(32)
+        java.security.SecureRandom().nextBytes(masterKeyBytes)
+
+        // Generate salt for password derivation
+        val salt = generateSalt()
+
+        // Derive key from password
+        val derivedKey = deriveKeyFromPassword(password, salt)
+        val secretKey = SecretKeySpec(derivedKey, "AES")
+
+        // Encrypt master key with derived key
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        val iv = cipher.iv
+        val encryptedMasterKey = cipher.doFinal(masterKeyBytes)
+
+        // Combine salt + iv + encrypted master key
+        val combined = salt.toByteArray(Charsets.UTF_8) + ":" +
+                      Base64.encodeToString(iv, Base64.NO_WRAP) + ":" +
+                      Base64.encodeToString(encryptedMasterKey, Base64.NO_WRAP)
+
+        return Base64.encodeToString(combined.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
     }
 
     /**

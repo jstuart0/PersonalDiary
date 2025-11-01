@@ -14,14 +14,16 @@ interface EntryFtsDao {
     /**
      * Search entries by query
      * FTS4 automatically handles tokenization and ranking
+     * Using rowid for consistent ordering since rank is not available in standard FTS4
      */
-    @Query("SELECT * FROM entries_fts WHERE entries_fts MATCH :query ORDER BY rank")
+    @Query("SELECT rowid, entryId, title, content, tags FROM entries_fts WHERE entries_fts MATCH :query ORDER BY rowid")
     fun search(query: String): Flow<List<EntryFtsEntity>>
 
     /**
      * Search with LIMIT for pagination
+     * Using rowid for consistent ordering since rank is not available in standard FTS4
      */
-    @Query("SELECT * FROM entries_fts WHERE entries_fts MATCH :query ORDER BY rank LIMIT :limit")
+    @Query("SELECT rowid, entryId, title, content, tags FROM entries_fts WHERE entries_fts MATCH :query ORDER BY rowid LIMIT :limit")
     suspend fun searchWithLimit(query: String, limit: Int): List<EntryFtsEntity>
 
     /**

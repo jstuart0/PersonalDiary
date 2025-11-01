@@ -1,5 +1,6 @@
 package com.jstuart0.personaldiary.data.repository
 
+import android.util.Base64
 import com.jstuart0.personaldiary.data.encryption.E2EEncryptionService
 import com.jstuart0.personaldiary.data.encryption.UCEEncryptionService
 import com.jstuart0.personaldiary.data.local.dao.UserDao
@@ -104,7 +105,15 @@ class AuthRepository @Inject constructor(
                 // Initialize encryption service
                 when (encryptionTier) {
                     EncryptionTier.E2E -> e2eEncryptionService.initialize(user.userId)
-                    EncryptionTier.UCE -> uceEncryptionService.initialize(password)
+                    EncryptionTier.UCE -> {
+                        // For UCE, we need the encrypted master key from the request
+                        val encryptedMasterKey = request.encryptedMasterKey ?: ""
+                        // Extract salt from the encrypted master key (it's the first part)
+                        val decodedData = String(Base64.decode(encryptedMasterKey, Base64.NO_WRAP), Charsets.UTF_8)
+                        val parts = decodedData.split(":")
+                        val salt = if (parts.isNotEmpty()) parts[0] else ""
+                        uceEncryptionService.initialize(password, encryptedMasterKey, salt)
+                    }
                 }
 
                 Result.success(user)
@@ -149,7 +158,15 @@ class AuthRepository @Inject constructor(
                 // Initialize encryption service
                 when (encryptionTier) {
                     EncryptionTier.E2E -> e2eEncryptionService.initialize(user.userId)
-                    EncryptionTier.UCE -> uceEncryptionService.initialize(password)
+                    EncryptionTier.UCE -> {
+                        // For UCE, we need the encrypted master key from the response
+                        val encryptedMasterKey = loginResponse.encryptedMasterKey ?: ""
+                        // Extract salt from the encrypted master key (it's the first part)
+                        val decodedData = String(Base64.decode(encryptedMasterKey, Base64.NO_WRAP), Charsets.UTF_8)
+                        val parts = decodedData.split(":")
+                        val salt = if (parts.isNotEmpty()) parts[0] else ""
+                        uceEncryptionService.initialize(password, encryptedMasterKey, salt)
+                    }
                 }
 
                 Result.success(user)

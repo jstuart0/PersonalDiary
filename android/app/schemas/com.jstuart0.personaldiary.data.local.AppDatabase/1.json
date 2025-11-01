@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "51034542054dbdc876f612fc513e3ca0",
+    "identityHash": "ff3217a076e5c32304fba7e319f35bae",
     "entities": [
       {
         "tableName": "users",
@@ -185,21 +185,16 @@
         "ftsOptions": {
           "tokenizer": "simple",
           "tokenizerArgs": [],
-          "contentTable": "entries",
+          "contentTable": "",
           "languageIdColumnName": "",
           "matchInfo": "FTS4",
           "notIndexedColumns": [],
           "prefixSizes": [],
           "preferredOrder": "ASC"
         },
-        "contentSyncTriggers": [
-          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_entries_fts_BEFORE_UPDATE BEFORE UPDATE ON `entries` BEGIN DELETE FROM `entries_fts` WHERE `docid`=OLD.`rowid`; END",
-          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_entries_fts_BEFORE_DELETE BEFORE DELETE ON `entries` BEGIN DELETE FROM `entries_fts` WHERE `docid`=OLD.`rowid`; END",
-          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_entries_fts_AFTER_UPDATE AFTER UPDATE ON `entries` BEGIN INSERT INTO `entries_fts`(`docid`, `entryId`, `title`, `content`, `tags`) VALUES (NEW.`rowid`, NEW.`entryId`, NEW.`title`, NEW.`content`, NEW.`tags`); END",
-          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_entries_fts_AFTER_INSERT AFTER INSERT ON `entries` BEGIN INSERT INTO `entries_fts`(`docid`, `entryId`, `title`, `content`, `tags`) VALUES (NEW.`rowid`, NEW.`entryId`, NEW.`title`, NEW.`content`, NEW.`tags`); END"
-        ],
+        "contentSyncTriggers": [],
         "tableName": "entries_fts",
-        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`entryId` TEXT NOT NULL, `title` TEXT, `content` TEXT NOT NULL, `tags` TEXT NOT NULL, content=`entries`)",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`entryId` TEXT NOT NULL, `title` TEXT, `content` TEXT NOT NULL, `tags` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "entryId",
@@ -507,7 +502,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '51034542054dbdc876f612fc513e3ca0')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ff3217a076e5c32304fba7e319f35bae')"
     ]
   }
 }
